@@ -70,49 +70,50 @@ function extract(file)
     end
 end
 
-function add()
+function add(file)
     local oldpwd = plpath.currentdir()
     tmpdir = posix.mkdtemp(posix.getenv('XDG_RUNTIME_DIR') .. '/' .. 'starbound-mods.XXXXXX')
     plpath.chdir(tmpdir)
-    -- compensate for the named options
-    local i = 1
-    while rawlen(args) >= i do
-        local dir = extract(oldpwd .. '/' .. args[i])
-        local modinfos = find_modinfo(dir)
-        for key, value in pairs(modinfos) do
-            --TODO: add a version check
+    local dir = extract(oldpwd .. '/' .. file)
+    local modinfos = find_modinfo(dir)
+    for key, value in pairs(modinfos) do
+        --TODO: add a version check
+        local installed_path = posix.getenv('HOME') .. '/.local/share/Steam/SteamApps/common/Starbound/mods/' .. posix.dirname(value)
+        if plpath.exists(installed_path) then
+            if plpath.isdir(installed_path) then
+                not_an_assert(pldir.rmtree(installed_path), 'Failed to delete directory: ' .. installed_path)
+            else
+                not_an_assert(os.remove(installed_path), 'Failed to delete file: ' .. installed_path)
+            end
+            pldir.movefile(posix.dirname(value), posix.getenv('HOME') .. '/.local/share/Steam/SteamApps/common/Starbound/mods/')
+        else
             pldir.movefile(posix.dirname(value), posix.getenv('HOME') .. '/.local/share/Steam/SteamApps/common/Starbound/mods/')
         end
-        i = i + 1
     end
 end
 
-function remove()
+function remove(file)
     local mod_dir = posix.getenv('HOME') .. '/.local/share/Steam/SteamApps/common/Starbound/mods/'
     if not plpath.isdir(mod_dir) then
         error('you need to run Starbound before running this', 0)
     end
     plpath.chdir(mod_dir)
-    -- compensate for the named options
-    local i = 1
-    while rawlen(args) >= i do
-        if plpath.exists(args[i]) then
-            print('Removing ' .. args[i])
-            if plpath.isdir(args[i]) then
-                local exit, errmsg = pldir.rmtree(plpath.abspath(args[i]))
-                if exit == nil then
-                    io.stderr:write(args[i] .. " : " .. errmsg)
-                end
-            else
-                local exit, errmsg = os.remove(args[i])
-                if exit == nil then
-                    io.stderr:write(args[i] .. " : " .. errmsg)
-                end
+
+    if plpath.exists(file) then
+        print('Removing ' .. file)
+        if plpath.isdir(file) then
+            local exit, errmsg = pldir.rmtree(plpath.abspath(file))
+            if exit == nil then
+                io.stderr:write(file .. " : " .. errmsg)
             end
         else
-            io.stderr:write(args[i] .. " doesn't exist.")
+            local exit, errmsg = os.remove(file)
+            if exit == nil then
+                io.stderr:write(file .. " : " .. errmsg)
+            end
         end
-        i = i + 1
+    else
+        io.stderr:write(file .. " doesn't exist.\n")
     end
 end
 
@@ -136,12 +137,18 @@ end
 -- handle the arguments
 if (args.add == true and args.list == true) or (args.add == true and args.remove == true) or (args.remove == true and args.list == true) then
     lapp.error('error: too many commands')
-elseif args.add == true then
-    add()
+elseif (args.add == true) or (args.remove == true) then
+    local i = 1
+    while rawlen(args) >= i do
+        if args.add == true then
+            add(args[i])
+        else
+            remove(args[i])
+        end
+        i = i + 1
+    end
 elseif args.list == true then
     list()
-elseif args.remove == true then
-    remove()
 else
     lapp.error('error: missing commands')
 end
