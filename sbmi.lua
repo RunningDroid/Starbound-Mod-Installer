@@ -194,7 +194,7 @@ function extract(file)
         if not os.execute('which unrar >/dev/null') then
             io.stderr:write('"which unrar" failed!\n')
             os.exit(false)
-        -- FIXME: unrar is stupid, and modifying which messages should be shown breaks it
+        -- FIXME: unrar is broken, and modifying which messages should be shown breaks it
         -- example: modifying any message-related flags breaks unpacking "Dungeoneer Dungeons"
         elseif not os.execute('unrar -inul x \'' .. file .. '\' \'' .. targetdir .. '\'') then
             io.stderr:write('failed to unrar ' .. file .. '!\n')
