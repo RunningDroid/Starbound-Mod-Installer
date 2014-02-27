@@ -289,26 +289,26 @@ function add(file_path, sbdir)
     plpath.chdir(oldpwd)
 end
 
--- takes the name of the dir to remove and the path to the starbound install
-function remove(mod_dirname, sbdir)
+-- takes the path to the starbound install, the name of the dir to remove and the name of the mod being removed
+function remove(sbdir, mod_dirname, modname)
     local mod_dir = sbdir .. 'mods/'
     plpath.chdir(mod_dir)
 
     if plpath.exists(mod_dirname) then
-        io.stdout:write('Removing ' .. mod_dirname .. '\n')
+        io.stdout:write('Removing ' .. modname .. '\n')
         if plpath.isdir(mod_dirname) then
             local exit, errmsg = pldir.rmtree(plpath.abspath(mod_dirname))
             if exit == nil then
-                io.stderr:write('Failed to delete ' .. mod_dirname .. " : " .. errmsg .. '\n')
+                io.stderr:write('Failed to delete ' .. modname .. " : " .. errmsg .. '\n')
             end
         else
             local exit, errmsg = os.remove(mod_dirname)
             if exit == nil then
-                io.stderr:write('Failed to delete ' .. mod_dirname .. " : " .. errmsg .. '\n')
+                io.stderr:write('Failed to delete ' .. modname .. " : " .. errmsg .. '\n')
             end
         end
     else
-        io.stderr:write(mod_dirname .. ' doesn\'t exist.\n')
+        io.stderr:write(modname .. ' isn\'t installed.\n')
     end
 end
 
@@ -338,7 +338,7 @@ elseif (args.add == true) or (args.remove == true) then
             add(args[i], sbdir_path)
         else
             if installed_mods[args[i]] ~= nil then
-                remove(installed_mods[args[i]], sbdir_path)
+                remove(sbdir_path, installed_mods[args[i]], args[i])
             else
                 io.stderr:write(args[i] .. ' doesn\'t exist\n')
             end
