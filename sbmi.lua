@@ -139,12 +139,32 @@ function findmodinfo(dir)
     for root, dirs, files in pldir.walk(dir, false, false) do
         for key, value in pairs(files) do
             if string.match(value, '.+%.modinfo$') then
-                modfile_table[#modfile_table+1] = root .. '/' .. value
+                modfile_table[#modfile_table+1] = plpath.abspath(root .. '/' .. value)
             end
         end
     end
-
     return modfile_table
+end
+
+-- takes a dir that's thought to contain .world files, returns a table containing the absolute paths to the .world files or nil if it can't find any
+function findworldfiles(dir)
+    if not dir or type(dir) ~= 'string' then
+        return nil
+    end
+
+    local worldfile_table = {}
+    for root, dirs, files in pldir.walk(dir, false, false) do
+        for key, value in pairs(files) do
+            if string.match(value, '.+%.world$') then
+                worldfile_table[#worldfile_table+1] = plpath.abspath(root .. '/' .. value)
+            end
+        end
+    end
+    if #worldfile_table ~= 0 then
+        return worldfile_table
+    else
+        return nil
+    end
 end
 
 -- returns a string with the location the file was extracted to
@@ -227,6 +247,7 @@ function add(file_path, sbdir)
         return nil
     end
     local modinfos = findmodinfo(dir)
+    local worldfiles = findworldfiles(dir)
     local sbversion = getsbversion(sbdir)
     -- key is useless, file_path is the path to the modinfo
     for key, modinfo_path in pairs(modinfos) do
@@ -264,6 +285,14 @@ function add(file_path, sbdir)
         if (modcompatver == sbversion) or force_install then
             io.stdout:write('Adding ' .. modname .. '\n')
             local installed_path = sbdir .. 'mods/' .. modname
+            if worldfiles then
+                for number, worldfile in ipairs(worldfiles) do
+                    local exit = pldir.movefile(worldfile, sbdir .. 'universe')
+                    if not exit then
+                        io.stderr:write('Failed to move ' .. worldfile)
+                    end
+                end
+            end
             if plpath.exists(installed_path) then
                 if plpath.isdir(installed_path) then
                     local exit, errmsg = pldir.rmtree(installed_path)
