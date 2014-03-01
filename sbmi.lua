@@ -40,8 +40,7 @@ function getjsonvalue(rawstring, key)
     if (not rawstring) or (not key) then
         return nil
     end
-    -- FIXME: this will break on, for example "AwesomeSauce's Awesome Mod"
-    local value = string.match(rawstring, '^%s+["\']' .. key ..'["\']%s*:%s*["\']([^"\']+)["\'][,]?%s*$')
+    local value = string.match(rawstring, '^%s+["\']' .. key ..'["\']%s*:%s*["\'](.+)["\'][,]?%s*$')
     return value
 end
 
