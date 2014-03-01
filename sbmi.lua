@@ -93,7 +93,6 @@ function getmodcompatver(modinfo_path)
 
     -- try to ensure 'line' gets gc'd when we're done with it
     line = nil
-    -- TODO: add a check to make sure we don't get the mod's version
     repeat
         line = modinfo:read('*l')
     until (not line) or string.match(line, 'version')
@@ -137,7 +136,6 @@ function findmodinfo(dir)
     end
 
     local modfile_table = {}
-    -- TODO: check to see if pl.dir.dirtree() would be better
     for root, dirs, files in pldir.walk(dir, false, false) do
         for key, value in pairs(files) do
             if string.match(value, '.+%.modinfo$') then
@@ -217,7 +215,6 @@ function extract(file)
     end
 end
 
--- TODO: fix how the mod 'Your Starbound Crew' is handled (it uses a universe directory, which doesn't have a *.modinfo)
 -- takes a path to a archive and the path to the starbound dir, returns true if successful nil if not
 function add(file_path, sbdir)
     local oldpwd = plpath.currentdir()
@@ -369,7 +366,6 @@ elseif (args.add == true) or (args.remove == true) then
     end
 elseif args.list == true then
     local installed_mods = listmods(SBDIR_PATH .. 'mods/')
-    -- TODO: add a sort
     for key, value in pairs(installed_mods) do
         io.stdout:write(key..'\n')
     end
