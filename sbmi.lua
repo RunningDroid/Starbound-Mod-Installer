@@ -32,12 +32,12 @@ local args = lapp [[
 ]]
 
 -- get the path to the starbound dir
-local sbdir_path = os.getenv('HOME') .. '/.local/share/Steam/SteamApps/common/Starbound/'
+local SBDIR_PATH = os.getenv('HOME') .. '/.local/share/Steam/SteamApps/common/Starbound/'
 
 
 -- takes a string thought to contain a specific key, returns the key's value or nil if the key can't be found
 function getjsonvalue(rawstring, key)
-    if (rawstring == nil ) or (key == nil) then
+    if (not rawstring) or (not key) then
         return nil
     end
     -- FIXME: this will break on, for example "AwesomeSauce's Awesome Mod"
@@ -47,18 +47,18 @@ end
 
 -- takes the path to the modinfo file, returns the mod's (hopefully) pretty name or nil if it can't find a name
 function getmodname(modinfo_path)
-    if modinfo_path == nil then
+    if not modinfo_path then
         error('modinfo_path is nil!')
     end
     local modinfo, errmsg = io.open(modinfo_path, 'r')
-    if modinfo == nil then
+    if not modinfo then
         error(errmsg)
     end
 
     for line in modinfo:lines() do
-        if string.match(line, 'name') ~= nil then
+        if string.match(line, 'name') then
             pretty_name = getjsonvalue(line, 'name')
-        elseif string.match(line, 'displayName') ~= nil then
+        elseif string.match(line, 'displayName') then
             prettier_name = getjsonvalue(line, 'displayName')
         end
     end
@@ -66,11 +66,11 @@ function getmodname(modinfo_path)
 
     -- try for a pretty name
     local name = prettier_name
-    if name == nil then
+    if not name then
         -- fall back to a potentially less pretty name
         name = pretty_name
     end
-    if name == nil then
+    if not name then
         -- fall back to the dirname (should never happen)
         io.stderr:write(modinfo_path .. ' is missing a name!\n')
         name = plpath.basename(plpath.dirname(modinfo_path))
@@ -84,11 +84,11 @@ end
 
 -- takes the path to the modinfo file, returns the version of Starbound the mod is compatible with
 function getmodcompatver(modinfo_path)
-    if modinfo_path == nil then
+    if not modinfo_path then
         error('modinfo_path is nil!')
     end
     local modinfo, errmsg = io.open(modinfo_path, 'r')
-    if modinfo == nil then
+    if not modinfo then
         error(errmsg)
     end
 
@@ -97,7 +97,7 @@ function getmodcompatver(modinfo_path)
     -- TODO: add a check to make sure we don't get the mod's version
     repeat
         line = modinfo:read('*l')
-    until (line == nil) or (string.match(line, 'version') ~= nil)
+    until (not line) or string.match(line, 'version')
 
     if not line then
         error(modinfo_path .. ' is empty!')
@@ -110,17 +110,17 @@ end
 
 -- takes the path to the starbound dir, returns the Starbound version
 function getsbversion(sbdir)
-    if sbdir == nil then
+    if not sbdir then
         error('sbdir is nil!')
     end
 
     -- check for a '/' at the end of the string
-    if string.match(sbdir, '/$') == nil then
+    if not string.match(sbdir, '/$') then
         sbdir = sbdir .. '/'
     end
 
     local assets, errmsg = io.open(sbdir .. 'assets/packed.pak', 'rb')
-    if assets == nil then
+    if not assets then
         error(errmsg)
     end
 
@@ -132,8 +132,8 @@ function getsbversion(sbdir)
 end
 
 -- returns a table listing all modfiles found
-function find_modinfo(dir)
-    if dir == nil or type(dir) ~= 'string' then
+function findmodinfo(dir)
+    if not dir or type(dir) ~= 'string' then
         return nil
     end
 
@@ -142,7 +142,7 @@ function find_modinfo(dir)
     for root, dirs, files in pldir.walk(dir, false, false) do
         for key, value in pairs(files) do
             if string.match(value, '.+%.modinfo$') then
-                table.insert(modfile_table, root .. '/' .. value)
+                modfile_table[#modfile_table+1] = root .. '/' .. value
             end
         end
     end
@@ -152,22 +152,22 @@ end
 
 -- returns a string with the location the file was extracted to
 function extract(file)
-    if file == nil then
+    if not file then
         error('file is nil!')
     end
 
     local targetdir, extension = plpath.splitext(plpath.basename(file))
     local exit, errmsg = plpath.mkdir(targetdir)
-    if exit == nil then
+    if not exit then
         if errmsg == 'File exists' then
             if plpath.isdir(targetdir) then
                 local exit, errmsg = pldir.rmtree(targetdir)
-                if exit == nil then
+                if not exit then
                     io.stderr:write('Failed to delete ' .. targetdir .. ' : ' .. errmsg .. '\n')
                 end
             else
                 local exit, errmsg = os.remove(targetdir)
-                if exit == nil then
+                if not exit then
                     io.stderr:write('Failed to delete ' .. targetdir .. ' : ' .. errmsg .. '\n')
                 end
             end
@@ -195,7 +195,7 @@ function extract(file)
             io.stderr:write('"which unrar" failed!\n')
             os.exit(false)
         -- FIXME: unrar is broken, and modifying which messages should be shown breaks it
-        -- example: modifying any message-related flags breaks unpacking "Dungeoneer Dungeons"
+        -- example: modifying any message-related flags breaks unpacking "../../Dungeoneer Dungeons v0.7.5.rar" but not "Dungeoneer Dungeons v0.7.5.rar"
         elseif not os.execute('unrar -inul x \'' .. file .. '\' \'' .. targetdir .. '\'') then
             io.stderr:write('failed to unrar ' .. file .. '!\n')
             return nil
@@ -228,10 +228,10 @@ function add(file_path, sbdir)
     plpath.mkdir(tmpdir)
     plpath.chdir(tmpdir)
     local dir = extract(plpath.normpath(oldpwd .. '/' .. file_path))
-    if dir == nil then
+    if not dir then
         return nil
     end
-    local modinfos = find_modinfo(dir)
+    local modinfos = findmodinfo(dir)
     local sbversion = getsbversion(sbdir)
     -- key is useless, file_path is the path to the modinfo
     for key, modinfo_path in pairs(modinfos) do
@@ -242,7 +242,7 @@ function add(file_path, sbdir)
             modinfo = io.open(modinfo_path, 'w+')
             local fixed_modinfo = string.gsub(modinfo_content, '\r', '\n')
             modinfo, errmsg = modinfo:write(fixed_modinfo)
-            if modinfo == nil then
+            if not modinfo then
                 error(errmsg)
             end
             modinfo:flush()
@@ -252,15 +252,15 @@ function add(file_path, sbdir)
         local modcompatver = getmodcompatver(modinfo_path)
         local modname = getmodname(modinfo_path)
         if modcompatver ~= sbversion then
-            if modcompatver == nil then
+            if not modcompatver then
                 io.stderr:write('modcompatver for "' .. modinfo_path ..'" is nil!\n')
-            elseif sbversion == nil then
+            elseif not sbversion then
                 io.stderr:write('sbversion is nil!\n')
             else
                 io.stdout:write('Warning: ' .. modname .. 'may not be compatible with the current version of Starbound.\n')
                 io.stdout:write('Do you wish to continue? [N/y]:')
                 local answer = io.stdin:read()
-                if string.match(string.lower(answer), 'y') ~= nil then
+                if string.match(string.lower(answer), 'y') then
                     force_install = true
                 end
             end
@@ -272,18 +272,18 @@ function add(file_path, sbdir)
             if plpath.exists(installed_path) then
                 if plpath.isdir(installed_path) then
                     local exit, errmsg = pldir.rmtree(installed_path)
-                    if exit == nil then
+                    if not exit then
                         io.stderr:write('Failed to delete ' .. installed_path .. ' : ' .. errmsg .. '\n')
                     end
                 else
                     local exit, errmsg = os.remove(installed_path)
-                    if exit == nil then
+                    if not exit then
                         io.stderr:write('Failed to delete ' .. installed_path .. ' : ' .. errmsg .. '\n')
                     end
                 end
 
                 -- make the final path be starbound/mods/$prettyname
-                if modname ~= nil then
+                if modname then
                     pldir.movefile(plpath.dirname(modinfo_path), modname)
                     pldir.movefile(modname, sbdir .. 'mods/')
                     return true
@@ -292,7 +292,7 @@ function add(file_path, sbdir)
                     return true
                 end
             else
-                if modname ~= nil then
+                if modname then
                     pldir.movefile(plpath.dirname(modinfo_path), modname)
                     pldir.movefile(modname, sbdir .. 'mods/')
                     return true
@@ -316,12 +316,12 @@ function remove(sbdir, mod_dirname, modname)
         io.stdout:write('Removing ' .. modname .. '\n')
         if plpath.isdir(mod_dirname) then
             local exit, errmsg = pldir.rmtree(plpath.abspath(mod_dirname))
-            if exit == nil then
+            if not exit  then
                 io.stderr:write('Failed to delete ' .. modname .. " : " .. errmsg .. '\n')
             end
         else
             local exit, errmsg = os.remove(mod_dirname)
-            if exit == nil then
+            if not exit then
                 io.stderr:write('Failed to delete ' .. modname .. " : " .. errmsg .. '\n')
             end
         end
@@ -331,12 +331,11 @@ function remove(sbdir, mod_dirname, modname)
 end
 
 -- takes the path to the starbound mods dir, returns at table containing the modnames and the full path to the mod's directory
-function list_mods(mod_dir)
-    --local mod_dir = sbdir_path .. 'mods/'
+function listmods(mod_dir)
     if not plpath.isdir(mod_dir) then
         error('you need to run Starbound before running this', 0)
     end
-    local modinfos = find_modinfo(mod_dir)
+    local modinfos = findmodinfo(mod_dir)
     local list = {}
     for key, value in pairs(modinfos) do
         local mod_name = getmodname(value)
@@ -350,13 +349,13 @@ if (args.add == true and args.list == true) or (args.add == true and args.remove
     lapp.error('error: too many commands')
 elseif (args.add == true) or (args.remove == true) then
     local i = 1
-    local installed_mods = list_mods(sbdir_path .. 'mods/')
+    local installed_mods = listmods(SBDIR_PATH .. 'mods/')
     while rawlen(args) >= i do
         if args.add == true then
-            add(args[i], sbdir_path)
+            add(args[i], SBDIR_PATH)
         else
-            if installed_mods[args[i]] ~= nil then
-                remove(sbdir_path, installed_mods[args[i]], args[i])
+            if installed_mods[args[i]] then
+                remove(SBDIR_PATH, installed_mods[args[i]], args[i])
             else
                 io.stderr:write(args[i] .. ' doesn\'t exist\n')
             end
@@ -364,7 +363,7 @@ elseif (args.add == true) or (args.remove == true) then
         i = i + 1
     end
 elseif args.list == true then
-    local installed_mods = list_mods(sbdir_path .. 'mods/')
+    local installed_mods = listmods(SBDIR_PATH .. 'mods/')
     -- TODO: add a sort
     for key, value in pairs(installed_mods) do
         io.stdout:write(key..'\n')
