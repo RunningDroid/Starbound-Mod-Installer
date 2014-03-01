@@ -184,7 +184,7 @@ function extract(file)
         if not os.execute('which unzip >/dev/null') then
             io.stderr:write('"which unzip" failed!\n')
             os.exit(false)
-        elseif not os.execute('unzip -qqUU -d ' .. targetdir .. ' ' .. file) then
+        elseif not os.execute('unzip -qqUU -d "' .. targetdir .. '" "' .. file .. '"') then
             io.stderr:write('failed to unzip ' .. file .. '!\n')
             return nil
         else
@@ -194,9 +194,7 @@ function extract(file)
         if not os.execute('which unrar >/dev/null') then
             io.stderr:write('"which unrar" failed!\n')
             os.exit(false)
-        -- FIXME: unrar is broken, and modifying which messages should be shown breaks it
-        -- example: modifying any message-related flags breaks unpacking "../../Dungeoneer Dungeons v0.7.5.rar" but not "Dungeoneer Dungeons v0.7.5.rar"
-        elseif not os.execute('unrar -inul x \'' .. file .. '\' \'' .. targetdir .. '\'') then
+        elseif not os.execute('unrar -inul x "' .. file .. '" "' .. targetdir .. '"') then
             io.stderr:write('failed to unrar ' .. file .. '!\n')
             return nil
         else
@@ -206,7 +204,7 @@ function extract(file)
         if not os.execute('which 7z >/dev/null') then
             io.stderr:write('"which 7z" failed!\n')
             os.exit(false)
-        elseif not os.execute('7z x -o' .. targetdir .. ' ' .. file .. ' >/dev/null') then
+        elseif not os.execute('7z x -o "' .. targetdir .. '" "' .. file .. '" >/dev/null') then
             io.stderr:write('failed to un-7z ' .. file .. '!\n')
             return nil
         else
