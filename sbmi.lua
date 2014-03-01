@@ -221,7 +221,7 @@ function extract(file)
         if not os.execute('which 7z >/dev/null') then
             io.stderr:write('"which 7z" failed!\n')
             os.exit(false)
-        elseif not os.execute('7z x -o "' .. targetdir .. '" "' .. file .. '" >/dev/null') then
+        elseif not os.execute('7z x "' .. file .. '" -o"' .. targetdir .. '" >/dev/null') then
             io.stderr:write('failed to un-7z ' .. file .. '!\n')
             return nil
         else
