@@ -229,6 +229,7 @@ function add(file_path, sbdir)
     plpath.chdir(tmpdir)
     local dir = extract(plpath.normpath(oldpwd .. '/' .. file_path))
     if not dir then
+        plpath.chdir(oldpwd)
         return nil
     end
     local modinfos = findmodinfo(dir)
@@ -274,11 +275,15 @@ function add(file_path, sbdir)
                     local exit, errmsg = pldir.rmtree(installed_path)
                     if not exit then
                         io.stderr:write('Failed to delete ' .. installed_path .. ' : ' .. errmsg .. '\n')
+                        plpath.chdir(oldpwd)
+                        return nil
                     end
                 else
                     local exit, errmsg = os.remove(installed_path)
                     if not exit then
                         io.stderr:write('Failed to delete ' .. installed_path .. ' : ' .. errmsg .. '\n')
+                        plpath.chdir(oldpwd)
+                        return nil
                     end
                 end
 
@@ -286,25 +291,28 @@ function add(file_path, sbdir)
                 if modname then
                     pldir.movefile(plpath.dirname(modinfo_path), modname)
                     pldir.movefile(modname, sbdir .. 'mods/')
+                    plpath.chdir(oldpwd)
                     return true
                 else
                     pldir.movefile(plpath.dirname(modinfo_path), sbdir .. 'mods/')
+                    plpath.chdir(oldpwd)
                     return true
                 end
             else
                 if modname then
                     pldir.movefile(plpath.dirname(modinfo_path), modname)
                     pldir.movefile(modname, sbdir .. 'mods/')
+                    plpath.chdir(oldpwd)
                     return true
                 else
                     pldir.movefile(plpath.dirname(modinfo_path), sbdir .. 'mods/')
+                    plpath.chdir(oldpwd)
                     return true
                 end
             end
         else
         end
     end
-    plpath.chdir(oldpwd)
 end
 
 -- takes the path to the starbound install, the name of the dir to remove and the name of the mod being removed
