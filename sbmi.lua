@@ -81,54 +81,6 @@ function getmodname(modinfo_path)
     return name
 end
 
--- takes the path to the modinfo file, returns the version of Starbound the mod is compatible with
-function getmodcompatver(modinfo_path)
-    if not modinfo_path then
-        error('modinfo_path is nil!')
-    end
-    local modinfo, errmsg = io.open(modinfo_path, 'r')
-    if not modinfo then
-        error(errmsg)
-    end
-
-    -- try to ensure 'line' gets gc'd when we're done with it
-    line = nil
-    repeat
-        line = modinfo:read('*l')
-    until (not line) or string.match(line, 'version')
-
-    if not line then
-        error(modinfo_path .. ' is empty!')
-    end
-
-    local version = getjsonvalue(line, 'version')
-    io.close(modinfo)
-    return version
-end
-
--- takes the path to the starbound dir, returns the Starbound version
-function getsbversion(sbdir)
-    if not sbdir then
-        error('sbdir is nil!')
-    end
-
-    -- check for a '/' at the end of the string
-    if not string.match(sbdir, '/$') then
-        sbdir = sbdir .. '/'
-    end
-
-    local assets, errmsg = io.open(sbdir .. 'assets/packed.pak', 'rb')
-    if not assets then
-        error(errmsg)
-    end
-
-    -- the start of the line containing the versionString in assets/packed.pak is 2646989 bytes in
-    assets:seek('set', 2646989)
-    local rawverstring = assets:read('*l')
-    local verstring = getjsonvalue(rawverstring, 'versionString')
-    return(verstring)
-end
-
 -- returns a table listing all modfiles found
 function findmodinfo(dir)
     if not dir or type(dir) ~= 'string' then
@@ -248,7 +200,6 @@ function add(file_path, sbdir)
     end
     local modinfos = findmodinfo(dir)
     local worldfiles = findworldfiles(dir)
-    local sbversion = getsbversion(sbdir)
     -- key is useless, file_path is the path to the modinfo
     for key, modinfo_path in pairs(modinfos) do
         -- if the file contains '\r' then we replace it with '\n'
@@ -265,75 +216,56 @@ function add(file_path, sbdir)
         end
         io.close(modinfo)
 
-        local modcompatver = getmodcompatver(modinfo_path)
         local modname = getmodname(modinfo_path)
-        if modcompatver ~= sbversion then
-            if not modcompatver then
-                io.stderr:write('modcompatver for "' .. modinfo_path ..'" is nil!\n')
-            elseif not sbversion then
-                io.stderr:write('sbversion is nil!\n')
-            else
-                io.stdout:write('Warning: ' .. modname .. 'may not be compatible with the current version of Starbound.\n')
-                io.stdout:write('Do you wish to continue? [N/y]:')
-                local answer = io.stdin:read()
-                if string.match(string.lower(answer), 'y') then
-                    force_install = true
+        io.stdout:write('Adding ' .. modname .. '\n')
+        local installed_path = sbdir .. 'mods/' .. modname
+        if worldfiles then
+            for number, worldfile in ipairs(worldfiles) do
+                local exit = pldir.movefile(worldfile, sbdir .. 'universe')
+                if not exit then
+                    io.stderr:write('Failed to move ' .. worldfile)
                 end
             end
         end
-
-        if (modcompatver == sbversion) or force_install then
-            io.stdout:write('Adding ' .. modname .. '\n')
-            local installed_path = sbdir .. 'mods/' .. modname
-            if worldfiles then
-                for number, worldfile in ipairs(worldfiles) do
-                    local exit = pldir.movefile(worldfile, sbdir .. 'universe')
-                    if not exit then
-                        io.stderr:write('Failed to move ' .. worldfile)
-                    end
-                end
-            end
-            if plpath.exists(installed_path) then
-                if plpath.isdir(installed_path) then
-                    local exit, errmsg = pldir.rmtree(installed_path)
-                    if not exit then
-                        io.stderr:write('Failed to delete ' .. installed_path .. ' : ' .. errmsg .. '\n')
-                        plpath.chdir(oldpwd)
-                        return nil
-                    end
-                else
-                    local exit, errmsg = os.remove(installed_path)
-                    if not exit then
-                        io.stderr:write('Failed to delete ' .. installed_path .. ' : ' .. errmsg .. '\n')
-                        plpath.chdir(oldpwd)
-                        return nil
-                    end
-                end
-
-                -- make the final path be starbound/mods/$prettyname
-                if modname then
-                    pldir.movefile(plpath.dirname(modinfo_path), modname)
-                    pldir.movefile(modname, sbdir .. 'mods/')
+        if plpath.exists(installed_path) then
+            if plpath.isdir(installed_path) then
+                local exit, errmsg = pldir.rmtree(installed_path)
+                if not exit then
+                    io.stderr:write('Failed to delete ' .. installed_path .. ' : ' .. errmsg .. '\n')
                     plpath.chdir(oldpwd)
-                    return true
-                else
-                    pldir.movefile(plpath.dirname(modinfo_path), sbdir .. 'mods/')
-                    plpath.chdir(oldpwd)
-                    return true
+                    return nil
                 end
             else
-                if modname then
-                    pldir.movefile(plpath.dirname(modinfo_path), modname)
-                    pldir.movefile(modname, sbdir .. 'mods/')
+                local exit, errmsg = os.remove(installed_path)
+                if not exit then
+                    io.stderr:write('Failed to delete ' .. installed_path .. ' : ' .. errmsg .. '\n')
                     plpath.chdir(oldpwd)
-                    return true
-                else
-                    pldir.movefile(plpath.dirname(modinfo_path), sbdir .. 'mods/')
-                    plpath.chdir(oldpwd)
-                    return true
+                    return nil
                 end
             end
+
+            -- make the final path be starbound/mods/$prettyname
+            if modname then
+                pldir.movefile(plpath.dirname(modinfo_path), modname)
+                pldir.movefile(modname, sbdir .. 'mods/')
+                plpath.chdir(oldpwd)
+                return true
+            else
+                pldir.movefile(plpath.dirname(modinfo_path), sbdir .. 'mods/')
+                plpath.chdir(oldpwd)
+                return true
+            end
         else
+            if modname then
+                pldir.movefile(plpath.dirname(modinfo_path), modname)
+                pldir.movefile(modname, sbdir .. 'mods/')
+                plpath.chdir(oldpwd)
+                return true
+            else
+                pldir.movefile(plpath.dirname(modinfo_path), sbdir .. 'mods/')
+                plpath.chdir(oldpwd)
+                return true
+            end
         end
     end
 end
