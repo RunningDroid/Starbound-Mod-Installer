@@ -44,6 +44,18 @@ function getjsonvalue(rawstring, key)
     return value
 end
 
+-- takes a string to be used with the shell, returns an escaped string
+function escape(string)
+    string = string.gsub(string, '`', '\\`')
+    string = string.gsub(string, '"', '\\"')
+    string = string.gsub(string, '!', '\\!')
+    string = string.gsub(string, '%$', '\\$')
+    string = string.gsub(string, '%c', '\\%1')
+    string = string.gsub(string, '^', '"')
+    string = string.gsub(string, '$', '"')
+    return string
+end
+
 -- takes the path to the modinfo file, returns the mod's (hopefully) pretty name or nil if it can't find a name
 function getmodname(modinfo_path)
     if not modinfo_path then
@@ -153,7 +165,7 @@ function extract(file)
         if not os.execute('which unzip >/dev/null') then
             io.stderr:write('"which unzip" failed!\n')
             os.exit(false)
-        elseif not os.execute('unzip -qqUU -d "' .. targetdir .. '" "' .. file .. '"') then
+        elseif not os.execute('unzip -qqUU -d ' .. escape(targetdir) .. ' ' .. escape(file)) then
             io.stderr:write('failed to unzip ' .. file .. '!\n')
             return nil
         else
@@ -163,7 +175,7 @@ function extract(file)
         if not os.execute('which unrar >/dev/null') then
             io.stderr:write('"which unrar" failed!\n')
             os.exit(false)
-        elseif not os.execute('unrar -inul x "' .. file .. '" "' .. targetdir .. '"') then
+        elseif not os.execute('unrar -inul x ' .. escape(file) .. ' ' .. escape(targetdir)) then
             io.stderr:write('failed to unrar ' .. file .. '!\n')
             return nil
         else
@@ -173,7 +185,7 @@ function extract(file)
         if not os.execute('which 7z >/dev/null') then
             io.stderr:write('"which 7z" failed!\n')
             os.exit(false)
-        elseif not os.execute('7z x "' .. file .. '" -o"' .. targetdir .. '" >/dev/null') then
+        elseif not os.execute('7z x ' .. escape(file) .. ' -o' .. escape(targetdir) .. ' >/dev/null') then
             io.stderr:write('failed to un-7z ' .. file .. '!\n')
             return nil
         else
@@ -221,7 +233,7 @@ function add(file_path, sbdir)
         local installed_path = sbdir .. 'mods/' .. modname
         if worldfiles then
             for number, worldfile in ipairs(worldfiles) do
-                local exit = pldir.movefile(worldfile, sbdir .. 'universe')
+                local exit = pldir.movefile(escape(worldfile), sbdir .. 'universe')
                 if not exit then
                     io.stderr:write('Failed to move ' .. worldfile)
                 end
@@ -246,8 +258,8 @@ function add(file_path, sbdir)
 
             -- make the final path be starbound/mods/$prettyname
             if modname then
-                pldir.movefile(plpath.dirname(modinfo_path), modname)
-                pldir.movefile(modname, sbdir .. 'mods/')
+                pldir.movefile(plpath.dirname(modinfo_path), escape(modname))
+                pldir.movefile(escape(modname), sbdir .. 'mods/')
                 plpath.chdir(oldpwd)
                 return true
             else
@@ -257,8 +269,8 @@ function add(file_path, sbdir)
             end
         else
             if modname then
-                pldir.movefile(plpath.dirname(modinfo_path), modname)
-                pldir.movefile(modname, sbdir .. 'mods/')
+                pldir.movefile(plpath.dirname(modinfo_path), escape(modname))
+                pldir.movefile(escape(modname), sbdir .. 'mods/')
                 plpath.chdir(oldpwd)
                 return true
             else
