@@ -212,8 +212,9 @@ function add(file_path, sbdir)
     end
     local modinfos = findmodinfo(dir)
     local worldfiles = findworldfiles(dir)
+    local exitvalue = true
     -- key is useless, file_path is the path to the modinfo
-    for key, modinfo_path in pairs(modinfos) do
+    for key, modinfo_path in ipairs(modinfos) do
         -- if the file contains '\r' then we replace it with '\n'
         local modinfo = io.open(modinfo_path)
         local modinfo_content = modinfo:read('*a')
@@ -251,14 +252,14 @@ function add(file_path, sbdir)
                 if not exit then
                     io.stderr:write('Failed to delete ' .. installed_path .. ' : ' .. errmsg .. '\n')
                     plpath.chdir(oldpwd)
-                    return nil
+                    exitvalue = nil
                 end
             else
                 local exit, errmsg = os.remove(installed_path)
                 if not exit then
                     io.stderr:write('Failed to delete ' .. installed_path .. ' : ' .. errmsg .. '\n')
                     plpath.chdir(oldpwd)
-                    return nil
+                    exitvalue = nil
                 end
             end
 
@@ -273,14 +274,11 @@ function add(file_path, sbdir)
                     io.stderr:write(errmsg .. '\n')
                 end
                 plpath.chdir(oldpwd)
-                return true
             else
                 local exit, errmsg = pldir.movefile(plpath.dirname(modinfo_path), sbdir .. 'mods/')
                 if not exit then
                     io.stderr:write(errmsg .. '\n')
                 end
-                plpath.chdir(oldpwd)
-                return true
             end
         else
             if modname then
@@ -293,18 +291,16 @@ function add(file_path, sbdir)
                     io.stderr:write(errmsg .. '\n')
                 end
                 plpath.chdir(oldpwd)
-                return true
             else
                 local exit, errmsg = pldir.movefile(plpath.dirname(modinfo_path), sbdir .. 'mods/')
                 if not exit then
                     io.stderr:write(errmsg .. '\n')
                 end
                 plpath.chdir(oldpwd)
-                return true
             end
         end
     end
-    return nil
+    return exitvalue
 end
 
 -- takes the path to the starbound install, the name of the dir to remove and the name of the mod being removed
