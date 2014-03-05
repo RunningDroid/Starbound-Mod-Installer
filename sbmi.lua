@@ -231,6 +231,7 @@ function add(file_path, sbdir)
 
         local modname = getmodname(modinfo_path)
         io.stdout:write('Adding ' .. modname .. '\n')
+        -- make the final path be starbound/mods/$prettyname
         local installed_path = ""
         local installed_dir = string.gsub(string.gsub(escape(modname), '%s', ''), '\\`', '')
         if modname then
@@ -242,7 +243,7 @@ function add(file_path, sbdir)
             for number, worldfile in ipairs(worldfiles) do
                 local exit = pldir.movefile(escape(worldfile), sbdir .. 'universe')
                 if not exit then
-                    io.stderr:write('Failed to move ' .. worldfile)
+                    io.stderr:write('Failed to move ' .. worldfile .. '\n')
                 end
             end
         end
@@ -263,41 +264,17 @@ function add(file_path, sbdir)
                 end
             end
 
-            -- make the final path be starbound/mods/$prettyname
-            if modname then
-                local exit, errmsg = pldir.movefile(plpath.dirname(modinfo_path), installed_dir)
-                if not exit then
-                    io.stderr:write(errmsg .. '\n')
-                end
-                local exit, errmsg = pldir.movefile(installed_dir, sbdir .. 'mods/')
-                if not exit then
-                    io.stderr:write(errmsg .. '\n')
-                end
-                plpath.chdir(oldpwd)
-            else
-                local exit, errmsg = pldir.movefile(plpath.dirname(modinfo_path), sbdir .. 'mods/')
-                if not exit then
-                    io.stderr:write(errmsg .. '\n')
-                end
+            local exit, errmsg = pldir.movefile(plpath.dirname(modinfo_path), installed_path)
+            if not exit then
+                io.stderr:write(errmsg .. '\n')
             end
+            plpath.chdir(oldpwd)
         else
-            if modname then
-                local exit, errmsg = pldir.movefile(plpath.dirname(modinfo_path), installed_dir)
-                if not exit then
-                    io.stderr:write(errmsg .. '\n')
-                end
-                local exit, errmsg = pldir.movefile(installed_dir, sbdir .. 'mods/')
-                if not exit then
-                    io.stderr:write(errmsg .. '\n')
-                end
-                plpath.chdir(oldpwd)
-            else
-                local exit, errmsg = pldir.movefile(plpath.dirname(modinfo_path), sbdir .. 'mods/')
-                if not exit then
-                    io.stderr:write(errmsg .. '\n')
-                end
-                plpath.chdir(oldpwd)
+            local exit, errmsg = pldir.movefile(plpath.dirname(modinfo_path), installed_path)
+            if not exit then
+                io.stderr:write(errmsg .. '\n')
             end
+            plpath.chdir(oldpwd)
         end
     end
     return exitvalue
@@ -350,7 +327,7 @@ elseif (args.add == true) or (args.remove == true) then
         if args.add == true then
             local exit = add(args[i], SBDIR_PATH)
             if not exit then
-                io.stderr:write(args[i] .. ': failed to install')
+                io.stderr:write(args[i] .. ': failed to install' .. '\n')
             end
         else
             if installed_mods[args[i]] then
