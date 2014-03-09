@@ -93,8 +93,8 @@ function getmodname(modinfo_path)
     return name
 end
 
--- returns a table listing all modfiles found
-function findmodinfo(dir)
+-- returns a table listing all modinfo and modpaks found
+function findmodfiles(dir)
     if not dir or type(dir) ~= 'string' then
         return nil
     end
@@ -103,6 +103,8 @@ function findmodinfo(dir)
     for root, dirs, files in pldir.walk(dir, false, false) do
         for key, value in pairs(files) do
             if string.match(value, '.+%.modinfo$') then
+                modfile_table[#modfile_table+1] = plpath.abspath(root .. '/' .. value)
+            elseif string.match(value, '.+%.modpak$') then
                 modfile_table[#modfile_table+1] = plpath.abspath(root .. '/' .. value)
             end
         end
@@ -210,26 +212,35 @@ function add(file_path, sbdir)
         plpath.chdir(oldpwd)
         return nil
     end
-    local modinfos = findmodinfo(dir)
+    local modfiles = findmodfiles(dir)
     local worldfiles = findworldfiles(dir)
     local exitvalue = true
     -- key is useless, file_path is the path to the modinfo
-    for key, modinfo_path in ipairs(modinfos) do
-        -- if the file contains '\r' then we replace it with '\n'
-        local modinfo = io.open(modinfo_path)
-        local modinfo_content = modinfo:read('*a')
-        if string.match(modinfo_content, '\r') then
-            modinfo = io.open(modinfo_path, 'w+')
-            local fixed_modinfo = string.gsub(modinfo_content, '\r', '\n')
-            modinfo, errmsg = modinfo:write(fixed_modinfo)
-            if not modinfo then
-                error(errmsg)
+    for key, modfile_path in ipairs(modfiles) do
+        local modfile_type = ''
+        local modname = ''
+        -- if we have a *.modpak, there are some things we can't do
+        if plpath.extension(modfile_path) == '.modinfo' then
+            modfile_type = 'info'
+            -- if the file contains '\r' then we replace it with '\n'
+            local modinfo = io.open(modfile_path)
+            local modinfo_content = modinfo:read('*a')
+            if string.match(modinfo_content, '\r') then
+                modinfo = io.open(modfile_path, 'w+')
+                local fixed_modinfo = string.gsub(modinfo_content, '\r', '\n')
+                modinfo, errmsg = modinfo:write(fixed_modinfo)
+                if not modinfo then
+                    error(errmsg)
+                end
+                modinfo:flush()
             end
-            modinfo:flush()
-        end
-        io.close(modinfo)
+            io.close(modinfo)
 
-        local modname = getmodname(modinfo_path)
+            modname = getmodname(modfile_path)
+        elseif plpath.extension(modfile_path) == '.modpak' then
+            modfile_type = 'pak'
+            modname = plpath.basename(plpath.dirname(modfile_path))
+        end
         io.stdout:write('Adding ' .. modname .. '\n')
         -- make the final path be starbound/mods/$prettyname
         local installed_path = ""
@@ -264,13 +275,13 @@ function add(file_path, sbdir)
                 end
             end
 
-            local exit, errmsg = pldir.movefile(plpath.dirname(modinfo_path), installed_path)
+            local exit, errmsg = pldir.movefile(plpath.dirname(modfile_path), installed_path)
             if not exit then
                 io.stderr:write(errmsg .. '\n')
             end
             plpath.chdir(oldpwd)
         else
-            local exit, errmsg = pldir.movefile(plpath.dirname(modinfo_path), installed_path)
+            local exit, errmsg = pldir.movefile(plpath.dirname(modfile_path), installed_path)
             if not exit then
                 io.stderr:write(errmsg .. '\n')
             end
@@ -308,10 +319,15 @@ function listmods(mod_dir)
     if not plpath.isdir(mod_dir) then
         error('you need to run Starbound before running this', 0)
     end
-    local modinfos = findmodinfo(mod_dir)
+    local modinfos = findmodfiles(mod_dir)
     local list = {}
     for key, value in pairs(modinfos) do
-        local mod_name = getmodname(value)
+        local mod_name
+        if plpath.extension(value) == '.modinfo' then
+            mod_name = getmodname(value)
+        elseif plpath.extension(value) == '.modpak' then
+            mod_name = plpath.basename(plpath.dirname(value))
+        end
         list[mod_name] = plpath.dirname(value)
     end
     return list
