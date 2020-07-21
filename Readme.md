@@ -1,5 +1,10 @@
 # Starbound Mod Installer (sbmi)
 A mod installer for [Starbound](http://playstarbound.com)
+
+**Starbound Mod Installer is no longer functional**
+
+The way Starbound handles mods changed a while back (before release) and I don't play it anymore.
+
 ## Usage:
 ### Adding Mods:
 ```
